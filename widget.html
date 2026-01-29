@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Project Feedback Widget</title>
+</head>
+
+<body>
+
+<h3>Project Feedback Widget</h3>
+
+<label>Filled By</label>
+<input id="filledBy" readonly />
+
+<label>Project Name</label>
+<select id="project"></select>
+
+<label>Job Name</label>
+<select id="job"></select>
+
+<button id="submitBtn">Submit</button>
+
+<div id="msg"></div>
+
+<script src="https://static.zohocdn.com/zp5/widgets/zpwidgetsdk.min.js"></script>
+
+<script>
+  ZOHO.embeddedApp.init();  // mandatory
+
+  document.getElementById("filledBy").value = "Testing..."; // Later auto-filled
+
+  document.getElementById("project").innerHTML =
+    "<option>Select Project</option>";
+
+  document.getElementById("job").innerHTML =
+    "<option>Select Project First</option>";
+
+  document.getElementById("submitBtn").onclick = function() {
+    document.getElementById("msg").innerText =
+      "This is test submit. Logic will be added next.";
+  };
+</script>
+
+</body>
+</html>

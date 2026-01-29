@@ -4,6 +4,12 @@
 <head>
   <meta charset="UTF-8">
   <title>Project Feedback Widget</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 12px; }
+    label { display: inline-block; width: 90px; margin-right: 6px; }
+    input, select { margin-right: 10px; }
+    #msg { margin-top: 10px; color: #444; }
+  </style>
 </head>
 
 <body>
@@ -23,35 +29,107 @@
 
   <div id="msg"></div>
 
-  <!-- Zoho People Widget SDK (required) -->
+  <!-- Zoho People Widget SDK -->
   <script src="https://static.zohocdn.com/zp5/widgets/zpwidgetsdk.min.js"></script>
 
   <script>
-    // Initialize widget (mandatory for Zoho People widgets) 
+    // Initialize widget (mandatory in Zoho People widgets) 
     ZOHO.embeddedApp.init();
 
-    // ✅ 1) Auto-fill "Filled By" from URL query param ?email=
-    // Zoho People External widget can pass logged-in user EmailID in URL placeholders [1](https://www.youtube.com/watch?v=7Do_bOATnd8)
-    const loginEmail = new URLSearchParams(window.location.search).get("email") || "";
-    document.getElementById("filledBy").value = loginEmail;
+    // ---- CONFIG ----
+    const BASE = "https://people.zoho.in";
+    const EMPLOYEE_FORM = "employee";   // confirmed by you
+    const EMAIL_FIELD = "EmailID";      // confirmed by you
 
-    // (Optional) If email is not received, show a message
+    // UI elements
+    const filledByEl = document.getElementById("filledBy");
+    const msgEl = document.getElementById("msg");
+
+    function setMsg(m) { msgEl.innerText = m || ""; }
+
+    // 1) Read login email from URL (Zoho People external widget placeholder) [1](https://www.youtube.com/watch?v=7Do_bOATnd8)
+    const loginEmail = new URLSearchParams(window.location.search).get("email") || "";
+
+    // Show something immediately (helps debugging)
+    filledByEl.value = loginEmail || "";
     if (!loginEmail) {
-      document.getElementById("msg").innerText =
-        "Email not received. Check widget URL is like: ...index.html?email=${Curr_User.EMAIL}";
+     not received. Check widget URL includes: ?email=${Curr_User.EMAIL}");
     }
 
-    // ✅ 2) Temporary dropdown placeholders (your existing test data)
-    document.getElementById("project").innerHTML =
-      "<option>Select Project</option>";
+    // 2) Fetch employee record by EmailID from Employee form (Forms API)
+    async function getEmployeeByEmail(email) {
+      // We call the Forms getRecords endpoint and pass searchParams.
+      // Using invokeUrl style is common for non-SDK endpoints in widgets. [2](https://help.zoho.com/portal/en/kb/people/administrator-guide/settings/developer-space/articles/custom-widget-introduction)
 
-    document.getElementById("job").innerHTML =
-      "<option>Select Project First</option>";
+      const searchParams = JSON.stringify({
+        searchField: EMAIL_FIELD,
+        searchOperator: "Is",
+        searchText: email
+      });
 
-    // ✅ 3) Submit button (your existing test message)
-    document.getElementById("submitBtn").onclick = function () {
-      document.getElementById("msg").innerText =
-        "This is test submit. Logic will be added next.";
+      const requestData = {
+        url: `${BASE}/people/api/forms/${EMPLOYEE_FORM}/getRecords`,
+        method: "GET",
+        // If your account enforces auth for this call, we will add connectiondetails later.
+        apiParams: {
+          searchParams: searchParams,
+          limit: 1
+        }
+      };
+
+      const resp = await ZOHO.People.API.invokeUrl(requestData); // widget API call pattern [2](https://help.zoho.com/portal/en/kb/people/administrator-guide/settings/developer-space/articles/custom-widget-introduction)
+      const data = JSON.parse(resp.content || "{}");
+      const rec = data?.response?.result?.[0] || null;
+      return rec;
+    }
+
+    function buildFullName(empRec) {
+      // Field API names shown in Developer Space often map to these keys:
+      // First Name -> FirstName, Last Name -> LastName (your screen shows First Name/Last Name). 
+      const first = empRec?.FirstName || empRec?.First_Name || "";
+      const last  = empRec?.LastName  || empRec?.Last_Name  || "";
+      const full = (first + " " + last).trim();
+      return full;
+    }
+
+    (async function autoFillName() {
+      try {
+        if (!loginEmail) return;
+
+        setMsg("Fetching employee name...");
+        const emp = await getEmployeeByEmail(loginEmail);
+
+        if (!emp) {
+          setMsg("No employee record found for this EmailID in Employee form.");
+          // keep email in field as fallback
+          filledByEl.value = loginEmail;
+          return;
+        }
+
+        const fullName = buildFullName(emp);
+
+        if (!fullName) {
+          setMsg("Employee found but name fields not detected. Keeping email.");
+          filledByEl.value = loginEmail;
+          return;
+        }
+
+        // ✅ Final: Filled By shows employee name
+        filledByEl.value = fullName;
+        setMsg("Done ✅ Filled By auto-populated.");
+      } catch (e) {
+        console.error(e);
+        setMsg("Error while fetching employee name: " + (e.message || e));
+        filledByEl.value = loginEmail; // fallback
+      }
+    })();
+
+    // Keep your test placeholders for now
+    document.getElementById("project").innerHTML = "<option>Select Project</option>";
+    document.getElementById("job").innerHTML = "<option>Select Project First</option>";
+
+    document.getElementById("submitBtn").onclick = function() {
+      setMsg("Submit clicked. Next we will implement Project/Job filtering.");
     };
   </script>
 

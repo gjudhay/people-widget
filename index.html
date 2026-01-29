@@ -7,39 +7,52 @@
 
 <body>
 
-<h3>Project Feedback Widget</h3>
+  <h3>Project Feedback Widget</h3>
 
-<label>Filled By</label>
-<input id="filledBy" readonly />
+  <label>Filled By</label>
+  <input id="filledBy" readonly />
 
-<label>Project Name</label>
-<select id="project"></select>
+  <label>Project Name</label>
+  <select id="project"></select>
 
-<label>Job Name</label>
-<select id="job"></select>
+  <label>Job Name</label>
+  <select id="job"></select>
 
-<button id="submitBtn">Submit</button>
+  <button id="submitBtn">Submit</button>
 
-<div id="msg"></div>
+  <div id="msg"></div>
 
-<script src="https://static.zohocdn.com/zp5/widgets/zpwidgetsdk.min.js"></script>
+  <!-- Zoho People Widget SDK (required) -->
+  <script src="https://static.zohocdn.com/zp5/widgets/zpwidgetsdk.min.js"></script>
 
-<script>
-  ZOHO.embeddedApp.init();  // mandatory
+  <script>
+    // Initialize widget (mandatory for Zoho People widgets) 
+    ZOHO.embeddedApp.init();
 
-  document.getElementById("filledBy").value = "Testing..."; // Later auto-filled
+    // ✅ 1) Auto-fill "Filled By" from URL query param ?email=
+    // Zoho People External widget can pass logged-in user EmailID in URL placeholders [1](https://www.youtube.com/watch?v=7Do_bOATnd8)
+    const loginEmail = new URLSearchParams(window.location.search).get("email") || "";
+    document.getElementById("filledBy").value = loginEmail;
 
-  document.getElementById("project").innerHTML =
-    "<option>Select Project</option>";
+    // (Optional) If email is not received, show a message
+    if (!loginEmail) {
+      document.getElementById("msg").innerText =
+        "Email not received. Check widget URL is like: ...index.html?email=${Curr_User.EMAIL}";
+    }
 
-  document.getElementById("job").innerHTML =
-    "<option>Select Project First</option>";
+    // ✅ 2) Temporary dropdown placeholders (your existing test data)
+    document.getElementById("project").innerHTML =
+      "<option>Select Project</option>";
 
-  document.getElementById("submitBtn").onclick = function() {
-    document.getElementById("msg").innerText =
-      "This is test submit. Logic will be added next.";
-  };
-</script>
+    document.getElementById("job").innerHTML =
+      "<option>Select Project First</option>";
+
+    // ✅ 3) Submit button (your existing test message)
+    document.getElementById("submitBtn").onclick = function () {
+      document.getElementById("msg").innerText =
+        "This is test submit. Logic will be added next.";
+    };
+  </script>
 
 </body>
 </html>

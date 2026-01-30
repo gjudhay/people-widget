@@ -12,18 +12,16 @@
   <input id="filledBy" readonly />
 
   <label>User Name</label>
-  <input id="userName" readonly />
+  <input id="username" readonly /> <!-- renamed field -->
 
   <label>Project Name</label>
   <select id="project">
     <option>Select Project</option>
-    <!-- Add dynamic options here -->
   </select>
 
   <label>Job Name</label>
   <select id="job">
     <option>Select Project First</option>
-    <!-- Add dynamic options here -->
   </select>
 
   <button id="submitBtn">Submit</button>
@@ -57,7 +55,7 @@
           const firstName = employee["FirstName"] || "";
           const lastName = employee["LastName"] || "";
           const fullName = `${firstName} ${lastName}`.trim();
-          document.getElementById("userName").value = fullName || "Name not available";
+          document.getElementById("username").value = fullName || "Name not available";
         } else {
           document.getElementById("msg").innerText = "No employee found for this email.";
         }

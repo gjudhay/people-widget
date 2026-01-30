@@ -12,19 +12,12 @@
   <input id="filledBy" readonly />
 
   <label>User Name</label>
-  <input id="username" readonly /> <!-- renamed field -->
+  <input id="username" readonly />
 
   <label>Project Name</label>
   <select id="project">
     <option>Select Project</option>
   </select>
-
-  <label>Job Name</label>
-  <select id="job">
-    <option>Select Project First</option>
-  </select>
-
-  <button id="submitBtn">Submit</button>
 
   <div id="msg"></div>
 
@@ -41,7 +34,29 @@
         return;
       }
 
-     
+      // Fetch employee name from Zoho People using EmailID
+      const inputData = {
+        formName: "Employee", // Confirm this matches your form name
+        criteria: `(EmailID:equals:${loginEmail})` // Use EmailID from your form
+      };
+
+      ZOHO.People.API.getRecords(inputData).then(function (response) {
+        console.log("Employee response:", response); // Debugging
+
+        if (response && response.data && response.data.length > 0) {
+          const employee = response.data[0];
+          const firstName = employee["FirstName"] || "";
+          const lastName = employee["LastName"] || "";
+          const fullName = `${firstName} ${lastName}`.trim();
+          document.getElementById("username").value = fullName || "Name not available";
+        } else {
+          document.getElementById("msg").innerText = "No employee found for this email.";
+        }
+      }).catch(function (error) {
+        console.error("Error fetching employee:", error);
+        document.getElementById("msg").innerText = "Error fetching employee details.";
+      });
+    });
 
     ZOHO.embeddedApp.init();
   </script>

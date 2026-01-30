@@ -15,10 +15,16 @@
   <input id="userName" readonly />
 
   <label>Project Name</label>
-  <select id="project"></select>
+  <select id="project">
+    <option>Select Project</option>
+    <!-- Add dynamic options here -->
+  </select>
 
   <label>Job Name</label>
-  <select id="job"></select>
+  <select id="job">
+    <option>Select Project First</option>
+    <!-- Add dynamic options here -->
+  </select>
 
   <button id="submitBtn">Submit</button>
 
@@ -37,16 +43,21 @@
         return;
       }
 
-      // Search Employee form for matching email
+      // Fetch employee name from Zoho People using EmailID
       const inputData = {
-        formName: "employee", // Confirm your form name in Zoho People
-        criteria: `(Email:equals:${loginEmail})`
+        formName: "Employee", // Confirm this matches your form name
+        criteria: `(EmailID:equals:${loginEmail})` // Use EmailID from your form
       };
 
       ZOHO.People.API.getRecords(inputData).then(function (response) {
+        console.log("Employee response:", response); // Debugging
+
         if (response && response.data && response.data.length > 0) {
           const employee = response.data[0];
-          document.getElementById("userName").value = employee["First Name"] + " " + employee["Last Name"];
+          const firstName = employee["FirstName"] || "";
+          const lastName = employee["LastName"] || "";
+          const fullName = `${firstName} ${lastName}`.trim();
+          document.getElementById("userName").value = fullName || "Name not available";
         } else {
           document.getElementById("msg").innerText = "No employee found for this email.";
         }
@@ -60,4 +71,3 @@
   </script>
 </body>
 </html>
-

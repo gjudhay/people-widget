@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Project Feedback Widget</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 12px; }
+      label { display:block; margin-top: 12px; font-weight: 600; }
+      input, select { width: 320px; padding: 8px; margin-top: 6px; }
+      button { margin-top: 16px; padding: 10px 14px; cursor: pointer; }
+      #msg { margin-top: 14px; color: #444; }
+      .error { color: #b00020; }
+      .ok { color: #0a7a0a; }
+    </style>
+  </head>
+
+  <body>
+    <h3>Project Feedback Widget</h3>
+
+    <label>Filled By (Email)</label>
+    <input id="filledBy" readonly />
+
+    <label>User Name</label>
+    <input id="userName" readonly />
+
+    <label>Project Name</label>
+    <select id="project">
+      <option value="">Select Project</option>
+    </select>
+
+    <label>Job Name</label>
+    <select id="job">
+      <option value="">Select Project First</option>
+    </select>
+
+    <button id="submitBtn">Submit</button>
+
+    <div id="msg">Loading...</div>
+
+    <!-- Zoho People Widget SDK -->
+    <script src="https://static.zohocdn.com/zp5/widgets/zpwidgetsdk.min.js"></script>
+
+    <script>
+      // -------------------------
+      // CONFIG (Change this only)
+      // -------------------------
+      // Connection "Link Name" from Zoho People -> Settings -> Developer Space -> Connections [5](https://help.zoho.com/portal/en/kb/people/administrator-guide/settings/developer-space/articles/connections-zoho-people)[2](https://help.zoho.com/portal/en/kb/people/administrator-guide/settings/developer-space/articles/js-sdk-library)
+      const PEOPLE_CONNECTION_LINK_NAME = "people_conn_link"; // <-- CHANGE THIS
+
+      // -------------------------
+      // HELPERS
+      // -------------------------
+      function setMsg(text, type) {
+        const msgEl = document.getElementById("msg");
+        msgEl.className = type === "error" ? "error" : type === "ok" ? "ok" : "";
+        msgEl.innerText = text;
+      }
+
+      function safeParseJSON(x) {
+        try {
+          return typeof x === "string" ? JSON.parse(x) : x;
+        } catch (e) {
+          return x;
+        }
+      }
+
+      // Try to build name from different response formats
+      function extractEmployeeName(record) {
+        // Fetch Record API sample fields: "First Name", "Last Name" [3](https://www.zoho.com/people/api/fetch-record.html)
+        const fn1 = record["First Name"] || record["FirstName"] || record["First_Name"] || "";
+        const ln1 = record["Last Name"]  || record["LastName"]  || record["Last_Name"]  || "";
+
+        // Some accounts may have "Employee Name"
+        const empName = record["Employee Name"] || record["EmployeeName"] || "";
+
+        const full = (empName || (fn1 + " " + ln1)).trim();
+        return full;
+      }
+
+      // -------------------------
+      // API CALL: Search employee by email
+      // -------------------------
+      async function fetchEmployeeByEmail(email) {
+        // Option A) Fetch Record API (Employee View) supports searchColumn/searchValue by email [3](https://www.zoho.com/people/api/fetch-record.html)
+        // URL pattern:
+        // https://people.zoho.com/api/forms/P_EmployeeView/records?searchColumn=EMPLOYEEMAILALIAS&searchValue=someone@domain.com [3](https://www.zoho.com/people/api/fetch-record.html)
+        const url =
+          "https://people.zoho.com/api/forms/P_EmployeeView/records" +
+          "?searchColumn=EMPLOYEEMAILALIAS" +
+          "&searchValue=" + encodeURIComponent(email);
+
+        // In Zoho People widgets, invokeUrl is used like below with connectiondetails/method, as shown in Zoho community sample. [1](https://help.zoho.com/portal/en/community/topic/people-5-0-widget-and-api-questions-17-3-2025)
+        const requestData = {
+          url: url,
+          connectiondetails: PEOPLE_CONNECTION_LINK_NAME,
+          method: "GET"
+        };
+
+        const resp = await ZOHO.People.API.invokeUrl(requestData); // [1](https://help.zoho.com/portal/en/community/topic/people-5-0-widget-and-api-questions-17-3-2025)
+
+        // Response typically includes statusCode/content (community example shows statusLine/content/statusCode) [1](https://help.zoho.com/portal/en/community/topic/people-5-0-widget-and-api-questions-17-3-2025)
+        const parsed = safeParseJSON(resp);
+        const content = parsed && parsed.content ? safeParseJSON(parsed.content) : parsed;
+
+        return content;
+      }
+
+      // -------------------------
+      // MAIN
+      // -------------------------
+      document.addEventListener("DOMContentLoaded", async function () {
+        const filledByEl = document.getElementById("filledBy");
+        const userNameEl = document.getElementById("userName");
+
+        // Init widget (mandatory) [2](https://help.zoho.com/portal/en/kb/people/administrator-guide/settings/developer-space/articles/js-sdk-library)
+        try {
+          await ZOHO.embeddedApp.init(); // [2](https://help.zoho.com/portal/en/kb/people/administrator-guide/settings/developer-space/articles/js-sdk-library)
+        } catch (e) {
+          setMsg("Widget init failed: " + (e?.message || e), "error");
+          return;
+        }
+
+        // Read email from URL: index.html?email=... (your current approach)
+        const loginEmail = new URLSearchParams(window.location.search).get("email") || "";
+        filledByEl.value = loginEmail;
+
+        if (!loginEmail) {
+          setMsg(
+            "Email not received. Widget URL must be like: ...index.html?email=${Curr_User.EMAIL}",
+            "error"
+          );
+          return;
+        }
+
+        setMsg("Fetching employee name from Zoho People...", "");
+
+        // Fetch and set name
+        try {
+          const data = await fetchEmployeeByEmail(loginEmail);
+
+          // Fetch Record API returns an array of records in sample response [3](https://www.zoho.com/people/api/fetch-record.html)
+          if (!data || (Array.isArray(data) && data.length === 0)) {
+            userNameEl.value = "";
+            setMsg("No employee found for email: " + loginEmail, "error");
+            return;
+          }
+
+          // If it's array, first record; else attempt to find first element
+          const record = Array.isArray(data) ? data[0] : data;
+
+          const fullName = extractEmployeeName(record);
+
+          if (!fullName) {
+            userNameEl.value = "";
+            setMsg(
+              "Employee found, but name fields not available. Check field labels in Employee View.",
+              "error"
+            );
+            return;
+          }
+
+          userNameEl.value = fullName;
+          setMsg("Employee identified: " + fullName, "ok");
+        } catch (e) {
+          console.error(e);
+          userNameEl.value = "";
+          setMsg(
+            "Failed to fetch employee. Check Connection Link Name + scopes. Error: " +
+              (e?.message || e),
+            "error"
+          );
+        }
+
+        // Your current placeholders
+        document.getElementById("project").innerHTML =
+          '<option value="">Select Project</option>';
+        document.getElementById("job").innerHTML =
+          '<option value="">Select Project First</option>';
+
+        // Submit test
+        document.getElementById("submitBtn").onclick = function () {
+          setMsg("This is test submit. Logic will be added next.", "");
+        };
+      });
+    </script>
+  </body>
+</html>

@@ -6,59 +6,53 @@
 </head>
 
 <body>
+
   <h3>Project Feedback Widget</h3>
 
-  <label>Filled By (Email)</label>
+  <label>Filled By</label>
   <input id="filledBy" readonly />
 
-  <label>User Name</label>
-  <input id="username" readonly />
-
   <label>Project Name</label>
-  <select id="project">
-    <option>Select Project</option>
-  </select>
+  <select id="project"></select>
+
+  <label>Job Name</label>
+  <select id="job"></select>
+
+  <button id="submitBtn">Submit</button>
 
   <div id="msg"></div>
 
+  <!-- Zoho People Widget SDK (required) -->
   <script src="https://static.zohocdn.com/zp5/widgets/zpwidgetsdk.min.js"></script>
 
   <script>
-    ZOHO.embeddedApp.on("PageLoad", function () {
-      const loginEmail = new URLSearchParams(window.location.search).get("email") || "";
-      document.getElementById("filledBy").value = loginEmail;
-
-      if (!loginEmail) {
-        document.getElementById("msg").innerText =
-          "Email not received. Check widget URL is like: ...index.html?email=${Curr_User.EMAIL}";
-        return;
-      }
-
-      // Fetch employee name from Zoho People using EmailID
-      const inputData = {
-        formName: "Employee", // Confirm this matches your form name
-        criteria: `(EmailID:equals:${loginEmail})` // Use EmailID from your form
-      };
-
-      ZOHO.People.API.getRecords(inputData).then(function (response) {
-        console.log("Employee response:", response); // Debugging
-
-        if (response && response.data && response.data.length > 0) {
-          const employee = response.data[0];
-          const firstName = employee["FirstName"] || "";
-          const lastName = employee["LastName"] || "";
-          const fullName = `${firstName} ${lastName}`.trim();
-          document.getElementById("username").value = fullName || "Name not available";
-        } else {
-          document.getElementById("msg").innerText = "No employee found for this email.";
-        }
-      }).catch(function (error) {
-        console.error("Error fetching employee:", error);
-        document.getElementById("msg").innerText = "Error fetching employee details.";
-      });
-    });
-
+    // Initialize widget (mandatory for Zoho People widgets)
     ZOHO.embeddedApp.init();
+
+    // ✅ 1) Auto-fill "Filled By" from URL query param ?email=
+    // Zoho People External widget can pass logged-in user EmailID in URL placeholders [1](https://www.youtube.com/watch?v=7Do_bOATnd8)
+    const loginEmail = new URLSearchParams(window.location.search).get("email") || "";
+    document.getElementById("filledBy").value = loginEmail;
+
+    // (Optional) If email is not received, show a message
+    if (!loginEmail) {
+      document.getElementById("msg").innerText =
+        "Email not received. Check widget URL is like: ...index.html?email=${Curr_User.EMAIL}";
+    }
+
+    // ✅ 2) Temporary dropdown placeholders (your existing test data)
+    document.getElementById("project").innerHTML =
+      "<option>Select Project</option>";
+
+    document.getElementById("job").innerHTML =
+      "<option>Select Project First</option>";
+
+    // ✅ 3) Submit button (your existing test message)
+    document.getElementById("submitBtn").onclick = function () {
+      document.getElementById("msg").innerText =
+        "This is test submit. Logic will be added next.";
+    };
   </script>
+
 </body>
 </html>
